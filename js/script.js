@@ -98,11 +98,9 @@ async function testSetting(port, option) {
     var dataLen = 0;
 
     // setup text filter stream
-    // const textDecoder = new TextDecoderStream();
-    // const readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
-    // const reader = textDecoder.readable.getReader();
-
-    const reader = port.readable.getReader();
+    const textDecoder = new TextDecoderStream();
+    const readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
+    const reader = textDecoder.readable.getReader();
 
     //const textEncoder = new TextEncoderStream();
     //const writableStreamClosed = textEncoder.readable.pipeTo(port.writable);
@@ -146,15 +144,11 @@ async function testSetting(port, option) {
             break;
         }
 
-        // write test to help generate text
-        // TODO this does not work
-        //await writer.write("\r\n?\r\n");
-
         // value is a string.
-        var printable = '';// value.replace(/[^\x20-\x7E]/g, '');
+        var printable = value.replace(/[^\x20-\x7E]/g, '');
 
         //console.log(`${port.name} \n\tgot data:`, value);
-        console.log(`${port.name} \n\tgot str:`, printable);
+        //console.log(`${port.name} \n\tgot str:`, printable);
 
         strLen += printable.length;
         dataLen += value.length;
@@ -164,7 +158,7 @@ async function testSetting(port, option) {
     await port.stopWatchSignals();
 
     // wait for everything to cleanup
-    //await readableStreamClosed.catch(() => { /* Ignore the error */ });
+    await readableStreamClosed.catch(() => { /* Ignore the error */ });
     //await writableStreamClosed;
     await port.close();
 
