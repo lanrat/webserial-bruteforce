@@ -1,7 +1,7 @@
 
 // TODO options to select these...
 const allOptions = {
-    baudRate: [1, 9600, 14400, 19200, 38400, 57600, 115200],
+    baudRate: [9600, 14400, 19200, 38400, 57600, 115200],
     //dataBits: [7,8],
     //flowControl: ["none", "hardware"],
     //parity: ["none", "even", "odd"],
@@ -10,6 +10,7 @@ const allOptions = {
 
 // TODO make ACM devices (flipper) get data....
 // TODO currently need no reset to make work?
+// TODO fallback option for android devices: https://github.com/google/web-serial-polyfill
 
 const restartElem = document.getElementById("restart");
 const testDurationElem = document.getElementById("testTime");
