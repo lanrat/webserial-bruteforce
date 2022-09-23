@@ -11,8 +11,17 @@
 
 <body>
     <h1>WebSerial Baudrate Bruteforce</h1>
-    <p id="warnBlock">Your Browser does not appear to support WebSerial</p>
+    <h2 id="warnBlock">Your Browser does not appear to support WebSerial</h2>
+    <h2>Information</h2>
+    <p>This page uses <a href="https://developer.mozilla.org/en-US/docs/Web/API/Web_Serial_API" target="_blank">WebSerial</a> to try every possible 
+        <a href="https://en.wikipedia.org/wiki/Symbol_rate" target="_blank"></a>baud rate</a> and returns the one that returns the most ASCII data.</p>
+    <p>This is useful when reversing a new device and the UART configuration is unknown.</p>
 
+    <p>For now only the most common baud rates are tested and no other modes are set.
+        A future version my include tests for other settings and allow for sending simulated data as well.</p>
+
+    <br>
+    <hr>
     <button onclick="addPort()">Add Port</button>
     <button onclick="forgetPorts()">Forget Ports</button>
 
@@ -27,10 +36,10 @@
             <label for="restart">Perform RTS restart between tests</label>
             <br>
 
-            <br>
+            <!-- <br>
             <label for="writeText">Write Text</label>
             <input type="text" name="writeText" id="writeText" value="\r?\r\r">
-            <br>
+            <br> -->
         </form>
     </details>
     <br>
@@ -57,7 +66,7 @@
         </form>
     </dialog>
 
-    <footer style="text-align: right;" >
+    <footer style="text-align: right;">
         <a target="_blank" href="https://twitter.com/lanrat">Made by @LANRAT</a>
         <br>
         <a target="_blank" href="https://github.com/lanrat/webserial-bruteforce">Source
