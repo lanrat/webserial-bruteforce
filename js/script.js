@@ -248,14 +248,11 @@ function addTablePort(port) {
     if (!port.hasOwnProperty("running")) {
         Object.defineProperty(port, "running", {
             get() {
-                return (port.btn.innerText == RunningButtonText);
+                return this._running;
             },
             set(v) {
-                if (v) {
-                    port.btn.innerText = RunningButtonText;
-                } else {
-                    port.btn.innerText = StoppedButtonText;
-                }
+                this._running = v;
+                port.btn.innerText = (v) ? RunningButtonText : StoppedButtonText;
             }
         });
     }
