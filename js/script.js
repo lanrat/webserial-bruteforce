@@ -1,13 +1,40 @@
 
+// TODO options to select these...
 const allOptions = {
-    baudRate: [9600, 14400, 19200, 38400, 57600, 115200],
+    baudRate: [1, 9600, 14400, 19200, 38400, 57600, 115200],
     //dataBits: [7,8],
     //flowControl: ["none", "hardware"],
     //parity: ["none", "even", "odd"],
     //stopBits: [1,2]
 }
 
+// TODO make ACM devices (flipper) get data....
+// TODO currently need no reset to make work?
+
 const restartElem = document.getElementById("restart");
+const testDurationElem = document.getElementById("testTime");
+const writeTextElem = document.getElementById("writeText");
+
+const config = {};
+Object.defineProperty(config, "test_duration", {
+    get() {
+        return testDurationElem.value;
+    },
+});
+Object.defineProperty(config, "restart", {
+    get() {
+        return restartElem.checked;
+    },
+});
+Object.defineProperty(config, "write", {
+    get() {
+        if (writeTextElem.value.length > 0) {
+            return writeTextElem.value;
+        }
+        return false;
+    },
+});
+
 
 function GetOptions() {
     var out = [];
@@ -30,39 +57,39 @@ function GetOptions() {
 async function bruteForce(port) {
     var options = GetOptions();
     var results = [];
-    console.log("testing all options:", options);
+    console.log(`${port.name} testing all options:`, options);
     for (const i in options) {
         if (!port.running) {
             // break early if need
-            // TODO find a better way
-            console.log("port no longer running, exiting early");
+            console.log(`port ${port.name} no longer running, exiting early`);
             port.resultsElem.innerText = "";
             return;
         }
         var result = await testSetting(port, options[i]);
         results.push(result);
-        console.log("result for:", result);
+        console.log(`${port.name} result for:`, result);
     }
     results.sort((a, b) => (a.pStr < b.pStr) ? 1 : -1);
-    console.log("all results:", results);
-    console.log("most likely result:", results[0]);
+    console.log(`${port.name} all results:`, results);
+    console.log(`${port.name} most likely result:`, results[0]);
     port.running = false;
 
     if (results[0].len > 0) {
-        port.resultsElem.innerText = results[0].options.baudRate;
+        port.result = results[0];
+        port.resultsElem.innerText = port.result.options.baudRate;
     } else {
         port.resultsElem.innerText = "no response data";
     }
 }
 
 async function testSetting(port, option) {
-    console.log("testing:", option);
-    const testDuration = 3; // TODO configurable
+    console.log(`${port.name} testing:`, option);
     await port.open(option).catch((e) => {
         console.error("port open error", e);
         port.running = false;
         showError(e);
     });
+    await watchSignals(port);
     await restart(port);
 
     port.resultsElem.innerText = `testing ${option.baudRate}`;
@@ -71,9 +98,11 @@ async function testSetting(port, option) {
     var dataLen = 0;
 
     // setup text filter stream
-    const textDecoder = new TextDecoderStream();
-    const readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
-    const reader = textDecoder.readable.getReader();
+    // const textDecoder = new TextDecoderStream();
+    // const readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
+    // const reader = textDecoder.readable.getReader();
+
+    const reader = port.readable.getReader();
 
     //const textEncoder = new TextEncoderStream();
     //const writableStreamClosed = textEncoder.readable.pipeTo(port.writable);
@@ -85,12 +114,12 @@ async function testSetting(port, option) {
 
 
     // close port after test duration
-    port.abort = async function() {
-            await reader.cancel();
-            //await writer.close();
+    port.abort = async function () {
+        await reader.cancel();
+        //await writer.close();
         clearTimeout(port.abortTimeout);
     }
-    port.abortTimeout = setTimeout(port.abort, testDuration * 1000);
+    port.abortTimeout = setTimeout(port.abort, config.test_duration * 1000);
     var testStr = "";
 
     // Listen to data coming from the serial device.
@@ -98,6 +127,13 @@ async function testSetting(port, option) {
         // send some data
         //console.log("waiting for write...");
         //writer.write(writeData);
+
+        // this kinda works
+        // encoder = new TextEncoder();
+        // const dataArrayBuffer = encoder.encode("\r\r\r\n?\r\n");
+        // const writer = port.writable.getWriter();
+        // writer.write(dataArrayBuffer);
+        // writer.releaseLock();
 
         console.log("waiting for read...");
 
@@ -115,18 +151,20 @@ async function testSetting(port, option) {
         //await writer.write("\r\n?\r\n");
 
         // value is a string.
-        var printable = value.replace(/[^\x20-\x7E]/g, '');
+        var printable = '';// value.replace(/[^\x20-\x7E]/g, '');
 
-        console.log("\tgot data:", value);
-        console.log("\tgot str:", printable);
-        
+        //console.log(`${port.name} \n\tgot data:`, value);
+        console.log(`${port.name} \n\tgot str:`, printable);
+
         strLen += printable.length;
         dataLen += value.length;
         testStr += printable;
     }
 
+    await port.stopWatchSignals();
+
     // wait for everything to cleanup
-    await readableStreamClosed.catch(() => { /* Ignore the error */ });
+    //await readableStreamClosed.catch(() => { /* Ignore the error */ });
     //await writableStreamClosed;
     await port.close();
 
@@ -149,8 +187,9 @@ function delay(time) {
 }
 
 async function restart(port) {
-    if (restartElem.checked) {
+    if (config.restart) {
         port.resultsElem.innerText = `restarting...`;
+        console.log(`${port.name} restarting`);
         await RtsRestart(port);
     }
 }
@@ -205,7 +244,6 @@ async function forgetPorts() {
             }
             port.row.remove();
         }
-
     });
 }
 
@@ -268,6 +306,16 @@ function addTablePort(port) {
     port.btn.onclick = debounce(() => goButton(port));
     port.row.insertCell().appendChild(port.btn);
 
+    if ("forget" in SerialPort.prototype) {
+        const forgetBtnElem = document.createElement("button");
+        forgetBtnElem.innerText = "Forget";
+        forgetBtnElem.onclick = function () {
+            port.forget();
+            port.row.remove();
+        };
+        port.btn.parentElement.appendChild(forgetBtnElem);
+    }
+
     // results
     port.resultsElem = document.createElement("p");
     port.row.insertCell().appendChild(port.resultsElem);
@@ -277,11 +325,15 @@ function goButton(port) {
     // update button state
     port.running = !port.running;
     if (port.running) {
-        bruteForce(port);
+        bruteForce(port).catch((e) => {
+            console.error("bruteForce error", e);
+            port.running = false;
+            showError(e);
+        });
     } else {
-       if (port.abort) {
+        if (port.abort) {
             port.abort();
-       }
+        }
     }
 }
 
@@ -296,4 +348,38 @@ function debounce(func, timeout = 300) {
             timer = undefined;
         }, timeout);
     };
+}
+
+// TODO test this
+async function watchSignals(port) {
+    const signalCheckDelay = 100;
+    console.log(`watching signals for ${port.name}`);
+    port.stopWatchSignals = async function () {
+        if (port.watchID) {
+            console.log(`stopping signals for ${port.name}`);
+            clearTimeout(port.watchID);
+            delete port.watchID
+        }
+    };
+
+    var signals = await port.getSignals();
+
+    (function loop() {
+        port.watchID = setTimeout(() => {
+            // watch logic here
+            if (!port.running) {
+                port.stopWatchSignals();
+                return;
+            }
+            var newSignals = port.getSignals();
+            let changes = Object
+                .entries(newSignals)
+                .filter(([key, value]) => value !== signals[key])
+            if (changes.length > 0) {
+                console.log(`!!! new signals for ${port.name}:`, changes);
+                signals = newSignals;
+            }
+            loop();
+        }, signalCheckDelay);
+    })();
 }
