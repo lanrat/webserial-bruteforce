@@ -1,0 +1,56 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.min.css">
+
+
+    <title>WebSerial Baudrate Bruteforce</title>
+
+</head>
+
+<body>
+    <h1>WebSerial Baudrate Bruteforce</h1>
+
+    <p id="warnBlock">Your Browser does not appear to support WebSerial</p>
+
+    <button onclick="addPort()">Add Port</button>
+    <button onclick="forgetPorts()">Forget Ports</button>
+
+    <input type="checkbox" name="restart" id="restart" checked="">
+    <label for="restart">Restart</label>
+    <br>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Port</th>
+                <th>Action</th>
+                <th>Results</th>
+            </tr>
+        </thead>
+        <tbody id="portsTable">
+        </tbody>
+    </table>
+
+
+    <!-- <code id="packet">
+    </code> -->
+    <script src="js/script.js"></script>
+
+    <!-- <span id="dialog-result"></span> -->
+
+    <dialog id="dialog">
+        <header>Error</header>
+        <form>
+            <p id="dialogError"></p>
+            <menu>
+                <button value="">Close</button>
+            </menu>
+        </form>
+    </dialog>
+
+</html>
