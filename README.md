@@ -5,4 +5,3 @@ Simple WebSerial demo to brute force the baud rate needed for a UART serial devi
 ## [View Tool](https://lanrat.github.io/webserial-bruteforce/)
 
 [lanrat.github.io/webserial-bruteforce](https://lanrat.github.io/webserial-bruteforce/)
-

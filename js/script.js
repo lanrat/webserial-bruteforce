@@ -1,4 +1,4 @@
-
+"use strict";
 // TODO options to select these...
 const allOptions = {
     baudRate: [9600, 14400, 19200, 38400, 57600, 115200],
