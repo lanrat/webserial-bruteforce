@@ -9,6 +9,7 @@
     "words": [
         "bruteforce",
         "codepaths",
+        "ondisconnect",
         "tsbuildinfo",
         "UART",
         "webserial"

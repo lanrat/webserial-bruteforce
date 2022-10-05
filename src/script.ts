@@ -1,5 +1,5 @@
 
-//import { detectDriver, Driver, getDriver } from "./driver";
+import { detectDriver, Driver, getDriver, SerialMux, SerialPortMux, SerialOptionsMux, SerialInputSignalsMux, requestDriver} from "./driver";
 
 // TODO options to select these...
 const allOptions = {
@@ -18,7 +18,7 @@ const dialogMessageElem = document.getElementById('dialogError')!;
 
 const portsTableElem = document.getElementById("portsTable")! as HTMLTableElement;
 
-var serialDriver: Serial;
+var serialDriver: SerialMux;
 
 // TODO make ACM devices (flipper) get data....
 // TODO currently need no reset to make work?
@@ -32,10 +32,10 @@ const RunningButtonText = "Stop";
 const StoppedButtonText = "Start";
 
 
-var metaPorts = new WeakMap<SerialPort, SerialPortMeta>();
+var metaPorts = new WeakMap<SerialPortMux, SerialPortMeta>();
 
 class SerialPortMeta {
-    port: SerialPort;
+    port: SerialPortMux;
     name: string;
     info: SerialPortInfo;
     private running_: boolean;
@@ -46,7 +46,7 @@ class SerialPortMeta {
     btn: HTMLButtonElement;
     resultsElem: HTMLElement;
 
-    constructor(port: SerialPort) {
+    constructor(port: SerialPortMux) {
         this.port = port;
         this.watchID = 0;
         this.abort_ = null;
@@ -123,12 +123,12 @@ class SerialPortMeta {
             }
         };
 
-        var signals = await this.port.getSignals();
+        var signals:SerialInputSignalsMux = await this.port.getSignals();
 
         const metaPort = this;
 
         (function loop() {
-            metaPort.watchID = setTimeout(async () => {
+            metaPort.watchID = window.setTimeout(async () => {
                 // watch logic here
                 if (!metaPort.running && metaPort.stopWatchSignals) {
                     metaPort.stopWatchSignals();
@@ -297,7 +297,7 @@ function GetOptions(): SerialOptions[] {
             // TODO support other options
             let option = allOptions[prop as keyof typeof allOptions];
             for (var i = 0; i < option.length; i++) {
-                var o = <SerialOptions>{};
+                var o = <SerialOptionsMux>{};
                 o[prop] = option[i];
                 out.push(o);
             }
@@ -341,7 +341,7 @@ function delay(time: number) {
 
 
 // restart by handling rts pin
-async function RtsRestart(port: SerialPort) {
+async function RtsRestart(port: SerialPortMux) {
     await port.setSignals({ dataTerminalReady: false, requestToSend: true });
     await delay(100);
     await port.setSignals({ dataTerminalReady: false, requestToSend: false });
@@ -353,8 +353,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         showError("WebSerial requires page to be over secure context");
         return;
     }
+    const urlParams = new URLSearchParams(location.search);
+
     let driver = detectDriver();
+
+    if (urlParams.has('driver')) {
+        let driverStr = urlParams.get('driver')!;
+        driver = requestDriver(driverStr);
+    }
+
     if (driver != null) { // test if driver is available
+        //console.log("detected best driver to use as", Driver[driver]);
         // The Web Serial API is supported.
         warnBlockElem.hidden = true;
         console.log("using serial driver: ", Driver[driver]);
@@ -388,7 +397,9 @@ function showError(msg: string) {
     dialogElem.showModal();
 }
 
-async function forgetPortsButton() {
+
+const forgetPortsButtonElem = document.getElementById("forgetPortsButton")!;
+forgetPortsButtonElem.onclick = async function() {
     serialDriver.getPorts().then((ports) => {
         for (const port of ports) {
             port.close().catch(() => { /* Ignore the error */ });;
@@ -403,7 +414,8 @@ async function forgetPortsButton() {
 }
 
 
-function addPortButton() {
+const addPortButtonElem = document.getElementById("addPortButton")!;
+addPortButtonElem.onclick = function() {
     serialDriver.requestPort().then((port) => {
         addPort(port);
     }).catch((e) => {
@@ -412,7 +424,7 @@ function addPortButton() {
     });
 }
 
-function addPort(port: SerialPort) {
+function addPort(port: SerialPortMux) {
     if (metaPorts.has(port)) {
         console.log("selected pre-approved port");
         return;
@@ -433,7 +445,7 @@ function goButton(port: SerialPortMeta) {
     } else {
         port.abort();
     }
-}
+};
 
 const debounce = <F extends (...args: Parameters<F>) => ReturnType<F>>(func: F, waitFor: number = 300,) => {
     let timeout: number | null;
@@ -443,7 +455,7 @@ const debounce = <F extends (...args: Parameters<F>) => ReturnType<F>>(func: F, 
         } else {
             func(...args);
         }
-        timeout = setTimeout(() => {
+        timeout = window.setTimeout(() => {
             timeout = null;
         }, waitFor);
     }
